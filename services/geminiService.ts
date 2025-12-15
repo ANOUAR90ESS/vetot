@@ -30,16 +30,29 @@ const callGeminiAPI = async (payload: any) => {
 const parseJSONFromText = (text: string | undefined): any => {
   if (!text) return null;
   let cleaned = text.trim();
+
   // Remove markdown code blocks if present
   if (cleaned.startsWith('```json')) {
     cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
+
+  // Try to find JSON array or object if there's extra text
+  const jsonArrayMatch = cleaned.match(/\[\s*\{[\s\S]*\}\s*\]/);
+  const jsonObjectMatch = cleaned.match(/\{\s*"[\s\S]*\}/);
+
+  if (jsonArrayMatch) {
+    cleaned = jsonArrayMatch[0];
+  } else if (jsonObjectMatch) {
+    cleaned = jsonObjectMatch[0];
+  }
+
   try {
     return JSON.parse(cleaned);
   } catch (e) {
-    console.error("Failed to parse JSON from response:", cleaned);
+    console.warn("Failed to parse JSON from response. Using fallback.", e);
+    // Don't log the entire cleaned text as it might be very long
     return null;
   }
 };
@@ -314,7 +327,7 @@ export const intelligentSearch = async (query: string, tools: Tool[], news: News
 };
 
 // --- Smart Chat (Search & Maps) ---
-export const sendChatMessage = async (history: {role: string, parts: any[]}[], message: string, useSearch: boolean, useMaps: boolean) => {
+export const sendChatMessage = async (_history: {role: string, parts: any[]}[], message: string, useSearch: boolean, useMaps: boolean) => {
   const tools: any[] = [];
   if (useSearch) tools.push({ googleSearch: {} });
   if (useMaps) tools.push({ googleMaps: {} });
